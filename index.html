@@ -5,6 +5,12 @@
     <title>Конструктор анкеты по KPI Framework</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+      .kpi-row { border-bottom: 1px solid #eee; }
+      .kpi-row:last-child { border-bottom: none; }
+      .formulation { font-size: 0.9rem; color: #333; }
+      #kpiList { max-height: 55vh; overflow-y: auto; }
+    </style>
   </head>
   <body class="bg-light">
     <div class="container py-4">
@@ -22,69 +28,139 @@
       {% endwith %}
 
       <div class="card shadow-sm mb-3">
-        <div class="card-body">
-          <p class="mb-1 small text-muted">Источник данных KPI:</p>
-          <p class="mb-2"><code>{{ kpi_source_label }}</code></p>
-          <p class="text-muted mb-0">Всего строк во framework: <strong>{{ total_questions }}</strong>.</p>
+        <div class="card-body py-2">
+          <p class="mb-1 small text-muted">Источник KPI:</p>
+          <p class="mb-0 small"><code>{{ kpi_source_label }}</code> · строк: <strong>{{ total_questions }}</strong></p>
         </div>
       </div>
 
-      <form method="post" class="card shadow-sm">
-        <div class="card-body">
-          <div class="row g-3">
-            <div class="col-md-6">
-              <label class="form-label">Блоки</label>
-              <select class="form-select" name="blocks" multiple size="8">
-                {% for block in blocks %}
-                  <option value="{{ block }}" {% if block in selected_blocks %}selected{% endif %}>{{ block }}</option>
-                {% endfor %}
+      <form method="post" id="mainForm">
+        <div class="card shadow-sm mb-3">
+          <div class="card-header d-flex flex-wrap align-items-center gap-2 justify-content-between">
+            <span class="fw-semibold">Показатели (отметьте нужные вопросы)</span>
+            <div class="d-flex flex-wrap gap-2">
+              <button type="button" class="btn btn-sm btn-outline-primary" id="btnAll">Выбрать все</button>
+              <button type="button" class="btn btn-sm btn-outline-secondary" id="btnNone">Снять все</button>
+            </div>
+          </div>
+          <div class="card-body pb-2">
+            <label for="searchKpi" class="form-label small mb-1">Поиск по метке, KPI, формулировке, блоку</label>
+            <input type="search" class="form-control form-control-sm" id="searchKpi" placeholder="Начните вводить текст…" autocomplete="off">
+          </div>
+          <div class="list-group list-group-flush px-0" id="kpiList">
+            {% for item in items %}
+              <label class="list-group-item kpi-row kpi-item py-3" data-search="{{ item.search_blob }}">
+                <div class="d-flex gap-2 align-items-start">
+                  <input class="form-check-input mt-1 flex-shrink-0 js-q" type="checkbox" name="q" value="{{ item.id }}" {% if item.id in selected_ids %}checked{% endif %}>
+                  <div class="flex-grow-1">
+                    <div class="fw-semibold">
+                      <span class="text-muted">[{{ item.label }}]</span>
+                      {{ item.kpi }}
+                      {% if item.has_options %}
+                        <span class="badge text-bg-light border ms-1">есть варианты в KPI</span>
+                      {% endif %}
+                    </div>
+                    <div class="formulation mt-1">{{ item.formulation }}</div>
+                    <div class="small text-muted mt-1">Блок: {{ item.block }} · Тип: {{ item.q_type }}</div>
+                  </div>
+                </div>
+              </label>
+            {% endfor %}
+          </div>
+        </div>
+
+        <div class="card shadow-sm mb-3">
+          <div class="card-header fw-semibold">Варианты ответа в DOCX</div>
+          <div class="card-body">
+            <div class="mb-3">
+              <div class="form-label">Когда показывать варианты</div>
+              <div class="form-check">
+                <input class="form-check-input" type="radio" name="answers_mode" id="am_off" value="off" {% if answers_mode == 'off' %}checked{% endif %}>
+                <label class="form-check-label" for="am_off">Не выводить списки вариантов</label>
+              </div>
+              <div class="form-check">
+                <input class="form-check-input" type="radio" name="answers_mode" id="am_closed" value="closed_only" {% if answers_mode == 'closed_only' %}checked{% endif %}>
+                <label class="form-check-label" for="am_closed">Только если в KPI задан список (есть варианты)</label>
+              </div>
+              <div class="form-check">
+                <input class="form-check-input" type="radio" name="answers_mode" id="am_all" value="all" {% if answers_mode == 'all' %}checked{% endif %}>
+                <label class="form-check-label" for="am_all">Для всех вопросов (где нет списка — пояснение)</label>
+              </div>
+            </div>
+            <div class="mb-3">
+              <label class="form-label" for="answers_style">Как оформить список вариантов</label>
+              <select class="form-select" id="answers_style" name="answers_style">
+                <option value="bullets" {% if answers_style == 'bullets' %}selected{% endif %}>Маркированный список</option>
+                <option value="numbered" {% if answers_style == 'numbered' %}selected{% endif %}>Нумерованный список (1. 2. 3.)</option>
+                <option value="inline" {% if answers_style == 'inline' %}selected{% endif %}>Одной строкой через «; »</option>
               </select>
-              <div class="form-text">Если ничего не выбрано, попадут все блоки.</div>
             </div>
-            <div class="col-md-6">
-              <label class="form-label">Обязательность</label>
-              <select class="form-select" name="obligatory" multiple size="4">
-                {% for val in obligatory_values %}
-                  <option value="{{ val }}" {% if val in selected_obligatory %}selected{% endif %}>{{ val }}</option>
-                {% endfor %}
-              </select>
-              <div class="form-text">Можно выбрать несколько значений.</div>
+            <div class="form-check">
+              <input class="form-check-input" type="checkbox" id="note_if_no_options" name="note_if_no_options" value="1" {% if note_if_no_options %}checked{% endif %}>
+              <label class="form-check-label" for="note_if_no_options">
+                Для режима «для всех вопросов»: добавлять пояснение, если в KPI нет явного списка вариантов
+              </label>
             </div>
           </div>
+        </div>
 
-          <div class="mt-3">
-            <label for="when_filter" class="form-label">Фильтр по полю «Когда использовать»</label>
-            <input type="text" class="form-control" id="when_filter" name="when_filter" value="{{ when_filter }}" placeholder="например: всегда, если видели">
+        <div class="card shadow-sm mb-3">
+          <div class="card-header fw-semibold">Дополнительно</div>
+          <div class="card-body">
+            <div class="mb-3">
+              <label for="when_filter" class="form-label">Фильтр «Когда использовать» (применяется к уже отмеченным вопросам)</label>
+              <input type="text" class="form-control" id="when_filter" name="when_filter" value="{{ when_filter }}" placeholder="например: всегда">
+              <div class="form-text">Если текст не встречается в поле — такие отмеченные вопросы в DOCX не попадут.</div>
+            </div>
+            <div class="form-check">
+              <input class="form-check-input" type="checkbox" id="include_rotation" name="include_rotation" value="1" {% if include_rotation %}checked{% endif %}>
+              <label class="form-check-label" for="include_rotation">Ротация вариантов для single/multi (если есть список в KPI)</label>
+            </div>
+            <div class="form-check mt-2">
+              <input class="form-check-input" type="checkbox" id="add_intro_instructions" name="add_intro_instructions" value="1" {% if add_intro_instructions %}checked{% endif %}>
+              <label class="form-check-label" for="add_intro_instructions">Общие инструкции интервьюеру в начале DOCX</label>
+            </div>
           </div>
+        </div>
 
-          <div class="row mt-2">
-            <div class="col-md-4">
-              <div class="form-check">
-                <input class="form-check-input" type="checkbox" id="include_answers" name="include_answers" {% if include_answers %}checked{% endif %}>
-                <label class="form-check-label" for="include_answers">Включать варианты ответов</label>
-              </div>
-            </div>
-            <div class="col-md-4">
-              <div class="form-check">
-                <input class="form-check-input" type="checkbox" id="include_rotation" name="include_rotation" {% if include_rotation %}checked{% endif %}>
-                <label class="form-check-label" for="include_rotation">Добавлять ротацию (где уместно)</label>
-              </div>
-            </div>
-            <div class="col-md-4">
-              <div class="form-check">
-                <input class="form-check-input" type="checkbox" id="add_intro_instructions" name="add_intro_instructions" {% if add_intro_instructions %}checked{% endif %}>
-                <label class="form-check-label" for="add_intro_instructions">Добавлять общие инструкции</label>
-              </div>
-            </div>
-          </div>
-
-          <div class="text-end mt-4">
-            <button type="submit" class="btn btn-primary">Собрать и скачать DOCX</button>
-          </div>
+        <div class="text-end mb-4">
+          <button type="submit" class="btn btn-primary btn-lg">Собрать и скачать DOCX</button>
         </div>
       </form>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+      (function () {
+        const search = document.getElementById('searchKpi');
+        const items = document.querySelectorAll('.kpi-item');
+        const btnAll = document.getElementById('btnAll');
+        const btnNone = document.getElementById('btnNone');
+
+        function applyFilter() {
+          const q = (search && search.value || '').trim().toLowerCase();
+          items.forEach(function (el) {
+            const blob = (el.getAttribute('data-search') || '').toLowerCase();
+            const show = !q || blob.indexOf(q) !== -1;
+            el.style.display = show ? '' : 'none';
+          });
+        }
+
+        if (search) {
+          search.addEventListener('input', applyFilter);
+        }
+
+        if (btnAll) {
+          btnAll.addEventListener('click', function () {
+            document.querySelectorAll('.js-q').forEach(function (cb) { cb.checked = true; });
+          });
+        }
+        if (btnNone) {
+          btnNone.addEventListener('click', function () {
+            document.querySelectorAll('.js-q').forEach(function (cb) { cb.checked = false; });
+          });
+        }
+      })();
+    </script>
   </body>
 </html>
