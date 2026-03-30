@@ -182,7 +182,7 @@ def _build_questionnaire_docx(
 ) -> str:
     doc = Document()
     doc.add_heading("Анкета количественного опроса (по KPI Framework)", level=1)
-    doc.add_paragraph("Документ сформирован автоматически в web-survey-app.")
+    doc.add_paragraph("Документ сформирован автоматически (survey-questionnaire-kpi).")
 
     criteria = [
         f"Блоки: {', '.join(selected_blocks) if selected_blocks else 'все'}",
