@@ -1,13 +1,8 @@
+# Опционально: New → Blueprint → выбрать репозиторий с этим файлом.
+# Либо создайте Web Service вручную (см. DEPLOY.md) — тогда render.yaml не обязателен.
 services:
   - type: web
-    name: survey-questionnaire-kpi
-    env: python
-    rootDir: .
-    buildCommand: pip install --prefer-binary -r requirements.txt
-    startCommand: gunicorn app:app --workers 1 --threads 2 --timeout 180 --graceful-timeout 30 --keep-alive 5
-    envVars:
-      - key: PYTHON_VERSION
-        value: 3.11.11
-      - key: FLASK_SECRET_KEY
-        generateValue: true
-
+    name: konstruktor-anket
+    runtime: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn app:app --bind 0.0.0.0:$PORT --workers 2 --timeout 120

@@ -1,166 +1,118 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="ru">
-  <head>
-    <meta charset="utf-8">
-    <title>Конструктор анкеты по KPI Framework</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <style>
-      .kpi-row { border-bottom: 1px solid #eee; }
-      .kpi-row:last-child { border-bottom: none; }
-      .formulation { font-size: 0.9rem; color: #333; }
-      #kpiList { max-height: 55vh; overflow-y: auto; }
-    </style>
-  </head>
-  <body class="bg-light">
-    <div class="container py-4">
-      <h3 class="mb-3">Конструктор анкеты (DOCX)</h3>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta name="api-prefix" content="{{ request.script_root or '' }}">
+  <title>Конструктор анкет — тесты креативов</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}?v={{ asset_version }}">
+</head>
+<body>
+  <div class="wrap">
+    <header class="page">
+      <h1>Конструктор анкеты под тест креативов</h1>
+      <p>Онлайн-опрос · 18–54 · география Яндекс Лавки · панель ОнИн. Соберите блоки, показатели и выгрузите ТЗ программисту в DOCX.</p>
+    </header>
 
-      {% with messages = get_flashed_messages(with_categories=true) %}
-        {% if messages %}
-          {% for category, message in messages %}
-            <div class="alert alert-{{ 'danger' if category == 'error' else category }} alert-dismissible fade show" role="alert">
-              {{ message }}
-              <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-            </div>
-          {% endfor %}
-        {% endif %}
-      {% endwith %}
+    <div class="top-toolbar">
+      <nav class="steps" id="stepNav" aria-label="Шаги"></nav>
+      <button type="button" class="secondary btn-reset" id="btnResetWizard" title="Очистить форму и вернуться к шагу 1">
+        Сбросить и начать заново
+      </button>
+    </div>
+    <div id="resetConfirmBar" class="reset-confirm hidden" role="region" aria-label="Подтверждение сброса">
+      <span class="reset-confirm-text">Сбросить все шаги и собранную анкету? Это нельзя отменить.</span>
+      <div class="reset-confirm-actions">
+        <button type="button" class="primary" id="btnResetConfirm">Да, сбросить</button>
+        <button type="button" class="secondary" id="btnResetCancel">Отмена</button>
+      </div>
+    </div>
+    <div id="errGlobal" class="err hidden"></div>
 
-      <div class="card shadow-sm mb-3">
-        <div class="card-body py-2">
-          <p class="mb-1 small text-muted">Источник KPI:</p>
-          <p class="mb-0 small"><code>{{ kpi_source_label }}</code> · строк: <strong>{{ total_questions }}</strong></p>
+    <!-- Шаг 1 -->
+    <section class="panel step" data-step="1">
+      <h2>1. Проект и этап</h2>
+      <p class="hint">Укажите название для шапки спецификации и тип замера: до выхода кампании (претест) или после (посттест).</p>
+      <label class="lbl" for="projectName">Название проекта / волны</label>
+      <input type="text" id="projectName" placeholder="Например: Летняя РК 2026 — претест">
+
+      <label class="lbl">Этап</label>
+      <div class="radio-row">
+        <label><input type="radio" name="phase" value="pre" checked> Претест (до кампании)</label>
+        <label><input type="radio" name="phase" value="post"> Посттест (после кампании)</label>
+      </div>
+    </section>
+
+    <!-- Шаг 2 -->
+    <section class="panel step hidden" data-step="2">
+      <h2>2. Материалы</h2>
+      <p class="hint">Сколько стимулов каждого типа попадёт в анкету (0 — если типа нет). Сценарий и концепция задаются отдельными счётчиками: при &gt; 0 подключаются соответствующие блоки вопросов.</p>
+      <div class="grid2">
+        <div>
+          <label class="lbl" for="cVideo">Ролики (видео)</label>
+          <input type="number" id="cVideo" min="0" max="20" value="0">
+        </div>
+        <div>
+          <label class="lbl" for="cLayout">Макеты (статика)</label>
+          <input type="number" id="cLayout" min="0" max="30" value="0">
+        </div>
+        <div>
+          <label class="lbl" for="cScenario">Сценарии (текст/сториборд)</label>
+          <input type="number" id="cScenario" min="0" max="10" value="0">
+        </div>
+        <div>
+          <label class="lbl" for="cConcept">Концепции (сценарий + КС + визуал)</label>
+          <input type="number" id="cConcept" min="0" max="10" value="0">
+        </div>
+        <div>
+          <label class="lbl" for="cPack">Упаковки</label>
+          <input type="number" id="cPack" min="0" max="20" value="0">
         </div>
       </div>
+      <p class="hint" style="margin-top:1rem">Минимум один тип материала с количеством &gt; 0, иначе собрать анкету нельзя.</p>
+      <h3 class="subh">Ссылки на стимулы (картинки / превью)</h3>
+      <p class="hint">Для каждого номера стимула можно указать URL или загрузить файл — ссылка попадёт в спецификацию и в DOCX для программистов. Видеоролики обычно ведут на хостинг; для макетов — превью-картинка.</p>
+      <div id="stimAssetRows"></div>
+    </section>
 
-      <form method="post" id="mainForm">
-        <div class="card shadow-sm mb-3">
-          <div class="card-header d-flex flex-wrap align-items-center gap-2 justify-content-between">
-            <span class="fw-semibold">Показатели (отметьте нужные вопросы)</span>
-            <div class="d-flex flex-wrap gap-2">
-              <button type="button" class="btn btn-sm btn-outline-primary" id="btnAll">Выбрать все</button>
-              <button type="button" class="btn btn-sm btn-outline-secondary" id="btnNone">Снять все</button>
-            </div>
-          </div>
-          <div class="card-body pb-2">
-            <label for="searchKpi" class="form-label small mb-1">Поиск по метке, KPI, формулировке, блоку</label>
-            <input type="search" class="form-control form-control-sm" id="searchKpi" placeholder="Начните вводить текст…" autocomplete="off">
-          </div>
-          <div class="list-group list-group-flush px-0" id="kpiList">
-            {% for item in items %}
-              <label class="list-group-item kpi-row kpi-item py-3" data-search="{{ item.search_blob }}">
-                <div class="d-flex gap-2 align-items-start">
-                  <input class="form-check-input mt-1 flex-shrink-0 js-q" type="checkbox" name="q" value="{{ item.id }}" {% if item.id in selected_ids %}checked{% endif %}>
-                  <div class="flex-grow-1">
-                    <div class="fw-semibold">
-                      <span class="text-muted">[{{ item.label }}]</span>
-                      {{ item.kpi }}
-                      {% if item.has_options %}
-                        <span class="badge text-bg-light border ms-1">есть варианты в KPI</span>
-                      {% endif %}
-                    </div>
-                    <div class="formulation mt-1">{{ item.formulation }}</div>
-                    <div class="small text-muted mt-1">Блок: {{ item.block }} · Тип: {{ item.q_type }}</div>
-                  </div>
-                </div>
-              </label>
-            {% endfor %}
-          </div>
-        </div>
+    <!-- Шаг 3 -->
+    <section class="panel step hidden" data-step="3">
+      <h2>3. Типовые показатели</h2>
+      <p class="hint">Блоки раскрываются по заголовку. Галочка у группы включает весь блок; внутри можно снять отдельные вопросы. Скрининг обязателен целиком. Если в анкете есть ролики, вопрос про дебрендированный <em>макет</em> автоматически не включается (остаётся один вопрос про дебренд по ролику).</p>
+      <div id="groupChecks" class="chk-list"></div>
+    </section>
 
-        <div class="card shadow-sm mb-3">
-          <div class="card-header fw-semibold">Варианты ответа в DOCX</div>
-          <div class="card-body">
-            <div class="mb-3">
-              <div class="form-label">Когда показывать варианты</div>
-              <div class="form-check">
-                <input class="form-check-input" type="radio" name="answers_mode" id="am_off" value="off" {% if answers_mode == 'off' %}checked{% endif %}>
-                <label class="form-check-label" for="am_off">Не выводить списки вариантов</label>
-              </div>
-              <div class="form-check">
-                <input class="form-check-input" type="radio" name="answers_mode" id="am_closed" value="closed_only" {% if answers_mode == 'closed_only' %}checked{% endif %}>
-                <label class="form-check-label" for="am_closed">Только если в KPI задан список (есть варианты)</label>
-              </div>
-              <div class="form-check">
-                <input class="form-check-input" type="radio" name="answers_mode" id="am_all" value="all" {% if answers_mode == 'all' %}checked{% endif %}>
-                <label class="form-check-label" for="am_all">Для всех вопросов (где нет списка — пояснение)</label>
-              </div>
-            </div>
-            <div class="mb-3">
-              <label class="form-label" for="answers_style">Как оформить список вариантов</label>
-              <select class="form-select" id="answers_style" name="answers_style">
-                <option value="bullets" {% if answers_style == 'bullets' %}selected{% endif %}>Маркированный список</option>
-                <option value="numbered" {% if answers_style == 'numbered' %}selected{% endif %}>Нумерованный список (1. 2. 3.)</option>
-                <option value="inline" {% if answers_style == 'inline' %}selected{% endif %}>Одной строкой через «; »</option>
-              </select>
-            </div>
-            <div class="form-check">
-              <input class="form-check-input" type="checkbox" id="note_if_no_options" name="note_if_no_options" value="1" {% if note_if_no_options %}checked{% endif %}>
-              <label class="form-check-label" for="note_if_no_options">
-                Для режима «для всех вопросов»: добавлять пояснение, если в KPI нет явного списка вариантов
-              </label>
-            </div>
-          </div>
-        </div>
+    <!-- Шаг 4 -->
+    <section class="panel step hidden" data-step="4">
+      <h2>4. Дополнительно</h2>
+      <p class="hint">Опциональные блоки (клик-тест, recall и т.д.) — только если есть подходящие материалы. Блок можно включить целиком и при необходимости снять отдельные вопросы внутри (если их несколько).</p>
+      <div id="extraChecks" class="chk-list"></div>
+      <label class="lbl" for="freeNotes">Свободные пожелания заказчика</label>
+      <textarea id="freeNotes" placeholder="Например: добавить вопрос про готовность скачать приложение; разделить показ макетов на два экрана…"></textarea>
+    </section>
 
-        <div class="card shadow-sm mb-3">
-          <div class="card-header fw-semibold">Дополнительно</div>
-          <div class="card-body">
-            <div class="mb-3">
-              <label for="when_filter" class="form-label">Фильтр «Когда использовать» (применяется к уже отмеченным вопросам)</label>
-              <input type="text" class="form-control" id="when_filter" name="when_filter" value="{{ when_filter }}" placeholder="например: всегда">
-              <div class="form-text">Если текст не встречается в поле — такие отмеченные вопросы в DOCX не попадут.</div>
-            </div>
-            <div class="form-check">
-              <input class="form-check-input" type="checkbox" id="include_rotation" name="include_rotation" value="1" {% if include_rotation %}checked{% endif %}>
-              <label class="form-check-label" for="include_rotation">Ротация вариантов для single/multi (если есть список в KPI)</label>
-            </div>
-            <div class="form-check mt-2">
-              <input class="form-check-input" type="checkbox" id="add_intro_instructions" name="add_intro_instructions" value="1" {% if add_intro_instructions %}checked{% endif %}>
-              <label class="form-check-label" for="add_intro_instructions">Общие инструкции интервьюеру в начале DOCX</label>
-            </div>
-          </div>
-        </div>
+    <!-- Шаг 5 -->
+    <section class="panel step hidden" data-step="5">
+      <h2>5. Структура анкеты</h2>
+      <p class="hint">Проверьте формулировки и типы ответов. Можно править текст, варианты (через «;»), добавлять строки. Затем выгрузите DOCX для передачи в разработку.</p>
+      <div class="actions">
+        <button type="button" class="primary" id="btnRebuild">Пересобрать из шагов 1–4</button>
+        <button type="button" class="secondary accent" id="btnExport">Скачать DOCX</button>
+        <button type="button" class="secondary" id="btnAddQ">Добавить свой вопрос</button>
+        <button type="button" class="secondary btn-reset" id="btnResetWizardStep5" title="Очистить форму и вернуться к шагу 1">
+          Сбросить и начать заново
+        </button>
+      </div>
+      <div id="specOut"></div>
+    </section>
 
-        <div class="text-end mb-4">
-          <button type="submit" class="btn btn-primary btn-lg">Собрать и скачать DOCX</button>
-        </div>
-      </form>
+    <div class="actions" id="navActions">
+      <button type="button" class="secondary" id="btnPrev">Назад</button>
+      <button type="button" class="primary" id="btnNext">Далее</button>
     </div>
-
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-    <script>
-      (function () {
-        const search = document.getElementById('searchKpi');
-        const items = document.querySelectorAll('.kpi-item');
-        const btnAll = document.getElementById('btnAll');
-        const btnNone = document.getElementById('btnNone');
-
-        function applyFilter() {
-          const q = (search && search.value || '').trim().toLowerCase();
-          items.forEach(function (el) {
-            const blob = (el.getAttribute('data-search') || '').toLowerCase();
-            const show = !q || blob.indexOf(q) !== -1;
-            el.style.display = show ? '' : 'none';
-          });
-        }
-
-        if (search) {
-          search.addEventListener('input', applyFilter);
-        }
-
-        if (btnAll) {
-          btnAll.addEventListener('click', function () {
-            document.querySelectorAll('.js-q').forEach(function (cb) { cb.checked = true; });
-          });
-        }
-        if (btnNone) {
-          btnNone.addEventListener('click', function () {
-            document.querySelectorAll('.js-q').forEach(function (cb) { cb.checked = false; });
-          });
-        }
-      })();
-    </script>
-  </body>
+  </div>
+  <script src="{{ url_for('static', filename='app.js') }}?v={{ asset_version }}" defer></script>
+</body>
 </html>
